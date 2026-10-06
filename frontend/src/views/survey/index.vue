@@ -3,7 +3,7 @@
     <header class="page-head">
       <div>
         <h2>考古调查管理</h2>
-        <p class="page-desc">维护调查记录，围绕调查编号、调查区域、调查方法、地表发现做登记、筛选与状态流转。</p>
+        <p class="page-desc">维护调查记录，围绕调查编号、归属单位、调查区域、调查方法、地表发现做登记、筛选与状态流转。</p>
       </div>
       <div class="page-actions">
         <button class="btn primary" type="button" @click="openCreate">登记调查记录</button>
@@ -46,15 +46,18 @@
           <td v-for="column in columns" :key="column">{{ row[column] ?? '—' }}</td>
           <td>{{ row.status }}</td>
           <td class="row-actions">
-            <button
-              v-for="action in actions"
-              :key="action"
-              class="link"
-              type="button"
-              @click="runAction(action, row)"
-            >
-              {{ action }}
-            </button>
+            <template v-if="rowActions(row).length">
+              <button
+                v-for="action in rowActions(row)"
+                :key="action"
+                class="link"
+                type="button"
+                @click="runAction(action, row)"
+              >
+                {{ action }}
+              </button>
+            </template>
+            <span v-else class="readonly-hint">仅查看</span>
           </td>
         </tr>
         <tr v-if="!rows.length">
@@ -64,7 +67,7 @@
     </table>
 
     <footer class="page-foot">
-      <span>共 {{ total }} 条考古调查记录</span>
+      <span>共 {{ total }} 条考古调查记录 · 状态单向推进：调查中 → 已记录 → 已复核 → 需复查 → 已归档</span>
       <span v-if="errorMessage" class="error-text">{{ errorMessage }}</span>
     </footer>
   </section>
@@ -74,30 +77,44 @@
 import { computed, onMounted, ref } from 'vue'
 
 import {
+  availableActions,
   downloadEntries,
   listEntries,
   moduleMeta,
   runAction as applyAction,
 } from '@/api/local-service'
+import { useSessionStore } from '@/stores/session'
 import type { EntryRow } from '@/data/types'
 
 const meta = moduleMeta('survey')
-const columns = ["调查编号", "调查区域", "调查方法", "地表发现", "断面观察", "初步断代", "调查人", "记录状态"]
-const actions = ["完成记录", "提交审核", "安排复查"]
-const statuses = ["调查中", "已记录", "已审核", "需复查"]
-const stats = [{"label": "调查次数", "value": 0}, {"label": "已审核记录", "value": 0}, {"label": "待复查记录", "value": 0}]
+const store = useSessionStore()
+const columns = meta.fields
+const statuses = meta.statuses
 
 const rows = ref<EntryRow[]>([])
 const total = ref(0)
 const errorMessage = ref('')
 const filters = ref<Record<string, string>>({})
-const filterFields = columns.slice(0, 3)
+// 调查编号与归属单位是排查归属错位的关键取数路径，筛选条件固定带上。
+const filterFields = ['调查编号', '归属单位', '调查区域', '调查方法']
+
 const statusSummary = computed(() =>
   statuses.map((status: string) => ({
     status,
     count: rows.value.filter((row) => String(row.status) === status).length,
   })),
 )
+
+const stats = computed(() => [
+  { label: '调查次数', value: rows.value.length },
+  { label: '已复核记录', value: rows.value.filter((row) => ['已复核', '需复查', '已归档'].includes(String(row.status))).length },
+  { label: '待复查记录', value: rows.value.filter((row) => String(row.status) === '需复查').length },
+  { label: '已归档记录', value: rows.value.filter((row) => String(row.status) === '已归档').length },
+])
+
+function rowActions(row: EntryRow): string[] {
+  return availableActions(meta, row, store.unit)
+}
 
 function resetFilters() {
   filters.value = {}
@@ -114,7 +131,7 @@ function openCreate() {
 
 function runAction(action: string, row: EntryRow) {
   errorMessage.value = ''
-  const result = applyAction(meta.key, Number(row.id), action)
+  const result = applyAction(meta.key, Number(row.id), action, store.unit)
   if (!result.ok) {
     errorMessage.value = result.message
     return
@@ -135,3 +152,7 @@ function reload() {
 
 onMounted(reload)
 </script>
+
+<style scoped>
+.readonly-hint { color: var(--muted); font-size: 12px; }
+</style>

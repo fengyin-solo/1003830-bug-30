@@ -1,7 +1,10 @@
+import { MODULES } from './modules'
+import { ensureOwner } from './ownership'
 import type { EntryRow } from './types'
 
 // 示例数据：首次打开时播种，之后浏览器里的改动优先，重置才会回到这份。
-export const SEED_ROWS: Record<string, EntryRow[]> = {
+// 归属单位的修正走 ownership.ts 里的共享口径，保证本地开发、构建预览、部署环境完全一致。
+export const RAW_SEED_ROWS: Record<string, EntryRow[]> = {
   "trench": [
     {
       "id": 1,
@@ -405,6 +408,7 @@ export const SEED_ROWS: Record<string, EntryRow[]> = {
       "pending": true,
       "abnormal": false,
       "调查编号": "SURV-0001",
+      "归属单位": "省考古研究院调查一队",
       "调查区域": "考古调查样例1",
       "调查方法": "考古调查样例1",
       "地表发现": "考古调查样例1",
@@ -417,8 +421,9 @@ export const SEED_ROWS: Record<string, EntryRow[]> = {
       "id": 2,
       "status": "已记录",
       "pending": true,
-      "abnormal": true,
+      "abnormal": false,
       "调查编号": "SURV-0002",
+      "归属单位": "省考古研究院调查二队",
       "调查区域": "考古调查样例2",
       "调查方法": "考古调查样例2",
       "地表发现": "考古调查样例2",
@@ -429,10 +434,11 @@ export const SEED_ROWS: Record<string, EntryRow[]> = {
     },
     {
       "id": 3,
-      "status": "已审核",
-      "pending": false,
+      "status": "已复核",
+      "pending": true,
       "abnormal": false,
       "调查编号": "SURV-0003",
+      "归属单位": "高校联合考古队",
       "调查区域": "考古调查样例3",
       "调查方法": "考古调查样例3",
       "地表发现": "考古调查样例3",
@@ -440,6 +446,37 @@ export const SEED_ROWS: Record<string, EntryRow[]> = {
       "初步断代": "考古调查样例3",
       "调查人": "考古调查样例3",
       "记录状态": "考古调查样例3"
+    },
+    {
+      "id": 4,
+      "status": "需复查",
+      "pending": true,
+      "abnormal": false,
+      "调查编号": "SURV-0004",
+      "归属单位": "省考古研究院调查一队",
+      "调查区域": "考古调查样例4",
+      "调查方法": "考古调查样例4",
+      "地表发现": "考古调查样例4",
+      "断面观察": "考古调查样例4",
+      "初步断代": "考古调查样例4",
+      "调查人": "考古调查样例4",
+      "记录状态": "考古调查样例4"
+    },
+    {
+      // 历史归档调查记录：迁移与播种都保持其原归属，不允许再流转，也不进概览待办。
+      "id": 5,
+      "status": "已归档",
+      "pending": false,
+      "abnormal": false,
+      "调查编号": "SURV-0005",
+      "归属单位": "高校联合考古队",
+      "调查区域": "考古调查样例5",
+      "调查方法": "考古调查样例5",
+      "地表发现": "考古调查样例5",
+      "断面观察": "考古调查样例5",
+      "初步断代": "考古调查样例5",
+      "调查人": "考古调查样例5",
+      "记录状态": "考古调查样例5"
     }
   ],
   "human_bone": [
@@ -795,3 +832,17 @@ export const SEED_ROWS: Record<string, EntryRow[]> = {
     }
   ],
 }
+
+// 跨模块示例数据初始化：用共享口径给每个模块的记录统一补齐归属单位，
+// 已显式写明归属（含历史归档记录）的保持原值，任何环境跑出来的播种结果都一致。
+const SEED_META_BY_KEY = new Map(MODULES.map((item) => [item.key, item]))
+
+export const SEED_ROWS: Record<string, EntryRow[]> = Object.fromEntries(
+  Object.entries(RAW_SEED_ROWS).map(([key, rows]) => {
+    const meta = SEED_META_BY_KEY.get(key)
+    if (!meta) {
+      return [key, rows]
+    }
+    return [key, rows.map((row) => ensureOwner(meta, row))]
+  }),
+)
