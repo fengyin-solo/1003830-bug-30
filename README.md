@@ -68,4 +68,11 @@ npm run build
 - 字段、状态、动作与流转目标集中在 `frontend/src/data/modules.ts`；示例数据在
   `frontend/src/data/seed.ts`。
 - 状态流转只允许在 `local-service.ts` 里改，页面组件不做业务判断。
+- 归属校验、待办口径、单向推进、归档去重是同一套共享校验（`local-service.ts` 里的
+  `canOperateRow` / `isTodoRow` / `checkAction`），列表页和概览页都从那里取数，不允许各写一份。
+- 考古调查模块登记了归属字段（`调查单位`）：跨单位人员只能查看，只有原调查单位能安排复查、
+  提交归档；调查记录状态按「调查中→已记录→已复核→需复查」单向推进；归档是标记操作，
+  同一调查编号只保留先成功的一次归档，后到请求明确拒绝；已归档记录不再进入概览待办。
+- 示例数据带版本号（`local-store.ts` 的 `SEED_VERSION`），版本不一致时以新示例数据为准重新
+  初始化，本地开发、构建预览、部署环境拿到的结果一致；历史归档的调查记录原样保留，归属不改。
 - 想回到初始数据：清掉浏览器里 `field-archaeology-digital:entries` 这一项，或调用 `resetModule(模块)`。

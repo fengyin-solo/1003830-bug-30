@@ -11,7 +11,16 @@
     <main class="app-main">
       <header class="app-head">
         <span class="head-desc">面向考古发掘现场探方管理、地层记录、遗迹测绘、遗物登记、浮选采样与测年送检全流程的田野考古数字化管理平台。</span>
-        <span class="head-user">当前值班：{{ store.operator }} · {{ store.shiftLabel }}</span>
+        <span class="head-user">
+          当前值班：{{ store.operator }} · {{ store.shiftLabel }} · 当前单位：
+          <select
+            class="unit-select"
+            :value="store.unit"
+            @change="store.setUnit(($event.target as HTMLSelectElement).value)"
+          >
+            <option v-for="unit in UNITS" :key="unit" :value="unit">{{ unit }}</option>
+          </select>
+        </span>
       </header>
       <RouterView />
     </main>
@@ -19,7 +28,7 @@
 </template>
 
 <script setup lang="ts">
-import { useSessionStore } from '@/stores/session'
+import { UNITS, useSessionStore } from '@/stores/session'
 
 const store = useSessionStore()
 

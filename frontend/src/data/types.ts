@@ -18,6 +18,14 @@ export type ModuleMeta = {
   actions: string[]
   actionTargets: Record<string, string>
   metrics: string[]
+  /** 行上记录归属单位的字段名；设置后跨单位人员只能查看，不能执行动作 */
+  ownerField?: string
+  /** 归档动作名：归档是标记操作（写 archived），不改状态 */
+  archiveAction?: string
+  /** 为 true 时状态只能按 statuses 顺序逐步向前推进，不允许倒退或跳步 */
+  oneWay?: boolean
+  /** 视为办结的状态（不再计入待办）；缺省取 statuses 最后一个 */
+  doneStatuses?: string[]
 }
 
 export type PageResult = {

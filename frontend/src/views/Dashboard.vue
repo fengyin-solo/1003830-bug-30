@@ -3,7 +3,7 @@
     <header class="page-head">
       <div>
         <h2>运营概览</h2>
-        <p class="page-desc">汇总各业务模块的关键指标，先看总量再看异常。</p>
+        <p class="page-desc">汇总各业务模块的关键指标，先看总量再看异常；待处理只统计当前单位可跟进的记录。</p>
       </div>
       <div class="page-actions">
         <button class="btn" type="button" @click="refresh">重新统计</button>
@@ -35,19 +35,23 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 
 import { loadOverview } from '@/api/local-service'
+import { useSessionStore } from '@/stores/session'
 import type { OverviewResult } from '@/data/types'
 
+const store = useSessionStore()
 const cards = ref<OverviewResult['cards']>([])
 const moduleRows = ref<OverviewResult['modules']>([])
 
 function refresh() {
-  const payload = loadOverview()
+  const payload = loadOverview(store.unit)
   cards.value = payload.cards
   moduleRows.value = payload.modules
 }
+
+watch(() => store.unit, refresh)
 
 onMounted(refresh)
 </script>
